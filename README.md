@@ -7,10 +7,18 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
-[![Gemma 4](https://img.shields.io/badge/Gemma_4-26B-tool_router-4285F4?logo=google&logoColor=white)](https://ai.google.dev/gemma)
 [![MLH](https://img.shields.io/badge/Built_for-MLH_Hackathons-FF6B6B)](https://mlh.io/)
 
+[![Built with Gemma](https://img.shields.io/badge/Built_with-Gemma_4-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://ai.google.dev/gemma)
+[![Gemma model](https://img.shields.io/badge/Model-gemma--4--26b--a4b--it-34A853?style=for-the-badge&logo=google&logoColor=white)](https://ai.google.dev/gemma/docs/core/model_card)
+[![Tool router](https://img.shields.io/badge/Pattern-JSON_tool_router-1a73e8?style=for-the-badge&logo=google&logoColor=white)](https://ai.google.dev/gemma)
+
 [Live repo](https://github.com/MuhibAnwar/eventpilot-ai) · [Product spec (PRD)](docs/PRD.md) · Check-in: `http://127.0.0.1:8000/check-in` when running locally
+
+<br />
+
+<img src="docs/screenshots/ai-assistant-panel.png" alt="EventPilot AI — system activity log and Gemma 4 AI assistant panel on the dashboard" width="920" />
+<p><em>Live dashboard: audit log stream + <strong>AI assistant</strong> (Gemma router chip, natural-language input, JSON tool output).</em></p>
 
 </div>
 
@@ -85,6 +93,21 @@ We use **`gemma-4-26b-a4b-it`** only in `app/agent.py` as a **structured tool ro
 - **Untrusted input** — spreadsheet cells and chat text are data; the UI escapes HTML when rendering.
 
 Thinking level is set to **MINIMAL** and temperature **0** for stable routing during live demos.
+
+<details>
+<summary><strong>Full dashboard screenshot</strong></summary>
+
+<img src="docs/screenshots/dashboard-overview.png" alt="EventPilot AI full registration dashboard with KPIs and participant table" width="920" />
+
+</details>
+
+Regenerate screenshots after UI changes (app running on port 8000):
+
+```powershell
+pip install playwright
+python -m playwright install chromium
+python scripts/capture_readme_screenshot.py
+```
 
 ---
 
