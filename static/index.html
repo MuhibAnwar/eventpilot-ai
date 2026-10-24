@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EventPilot AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="brand-mark">EP</span>
+        <span class="brand-text">EventPilot AI</span>
+      </div>
+      <nav class="nav">
+        <a class="nav-item active" href="#">Dashboard</a>
+        <a class="nav-item muted" href="#importPanel" title="Coming soon">Events</a>
+        <a class="nav-item muted" href="#importPanel">Templates</a>
+        <a class="nav-item" href="#activityPanel">Logs</a>
+        <a class="nav-item" href="/check-in">Check-in</a>
+      </nav>
+      <div class="nav-section-label">System</div>
+      <nav class="nav">
+        <a class="nav-item muted" href="#">Settings</a>
+      </nav>
+      <div class="sidebar-user">
+        <div class="avatar" id="organizerInitials">EO</div>
+        <div>
+          <div class="user-name" id="organizerName">Event Organizer</div>
+          <div class="user-role">Organizer</div>
+        </div>
+      </div>
+    </aside>
+
+    <div class="main-wrap">
+      <header class="page-header">
+        <div>
+          <p class="eyebrow">Registration Dashboard</p>
+          <h1 id="eventTitle">EventPilot Event</h1>
+          <p class="subhead">
+            <span id="eventDate">—</span>
+            <span class="dot">·</span>
+            <span id="emailStatus" class="email-pill">Email checking…</span>
+          </p>
+        </div>
+        <div class="header-actions">
+          <button type="button" class="btn btn-primary" id="btnOpenImport">Import participants</button>
+        </div>
+      </header>
+
+      <section class="stats-grid" aria-label="Overview metrics">
+        <article class="stat-card">
+          <div class="stat-label">Total registrations</div>
+          <div class="stat-value" id="statTotal">0</div>
+          <div class="stat-foot">All saved participants</div>
+        </article>
+        <article class="stat-card accent-green">
+          <div class="stat-label">Confirmed</div>
+          <div class="stat-value" id="statConfirmed">0</div>
+          <div class="stat-foot"><span id="statConversion">0%</span> conversion rate</div>
+        </article>
+        <article class="stat-card accent-amber">
+          <div class="stat-label">Pending review</div>
+          <div class="stat-value" id="statPending">0</div>
+          <div class="stat-foot">Action required</div>
+        </article>
+        <article class="stat-card accent-blue">
+          <div class="stat-label">Emails sent</div>
+          <div class="stat-value" id="statEmailRate">0%</div>
+          <div class="stat-foot">Confirm / pass / cert activity</div>
+        </article>
+        <article class="stat-card accent-purple">
+          <div class="stat-label">Checked in</div>
+          <div class="stat-value" id="statCheckedIn">0</div>
+          <div class="stat-foot"><span id="statAttendance">0%</span> of confirmed at door</div>
+        </article>
+      </section>
+
+      <section class="panel judge-panel">
+        <div class="panel-head compact">
+          <h2>Hackathon demo kit</h2>
+          <span class="chip chip-gold">Judge-ready</span>
+        </div>
+        <ul class="judge-list" id="judgeHighlights">
+          <li>AI tool router (Gemma 4) with allowlisted server actions</li>
+          <li>3-email workflow + QR pass PDF + certificate PDF</li>
+          <li>Live QR check-in at <a href="/check-in">/check-in</a></li>
+        </ul>
+        <p id="judgeNarrative" class="judge-narrative">Loading pitch summary…</p>
+        <div class="toolbar judge-tools">
+          <button type="button" class="btn btn-primary" id="btnBulkPasses">Bulk send passes</button>
+          <a class="btn btn-ghost" href="/api/participants/export.csv">Export CSV</a>
+          <button type="button" class="btn btn-ghost" id="btnRefreshSummary">Refresh pitch</button>
+        </div>
+      </section>
+
+      <section class="panel" id="importPanel">
+        <div class="panel-head">
+          <h2>Participants</h2>
+          <div class="toolbar">
+            <input type="search" id="searchInput" placeholder="Search participants…" />
+            <select id="statusFilter" aria-label="Filter by status">
+              <option value="">All statuses</option>
+              <option value="pending">Pending</option>
+              <option value="confirmed">Confirmed</option>
+            </select>
+            <button type="button" id="btnRefresh" class="btn btn-ghost">Refresh</button>
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table id="dashTable" class="data-table">
+            <thead>
+              <tr>
+                <th>Participant</th>
+                <th>Status</th>
+                <th>Pass</th>
+                <th>Certificate</th>
+                <th>Attendance</th>
+                <th>Joined</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <p class="table-foot" id="tableFoot">Showing 0 participants</p>
+      </section>
+
+      <div class="split-panels">
+        <section class="panel" id="activityPanel">
+          <div class="panel-head compact">
+            <h2>System activity log</h2>
+            <button type="button" class="btn btn-ghost btn-sm" id="btnRefreshLogs">View all</button>
+          </div>
+          <div id="logStream" class="log-stream" aria-live="polite"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head compact">
+            <h2>AI assistant</h2>
+            <span class="chip">Gemma router</span>
+          </div>
+          <p class="hint">Ask in plain language — routed to safe dashboard tools only.</p>
+          <form id="nlForm" class="nl-row">
+            <input type="text" id="nlInput" placeholder="Show invalid emails…" required />
+            <button type="submit" class="btn btn-primary">Run</button>
+          </form>
+          <pre id="nlOutput" class="nl-output">{}</pre>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <dialog id="importModal" class="modal">
+    <div class="modal-head">
+      <h3>Import participants</h3>
+      <button type="button" class="icon-btn" id="btnCloseImport" aria-label="Close">×</button>
+    </div>
+    <p class="hint">Upload `.xlsx` with columns <code>id</code>, <code>name</code>, <code>email</code>.</p>
+    <form id="uploadForm">
+      <label class="file-drop">
+        <input type="file" id="fileInput" accept=".xlsx" required />
+        <span>Choose spreadsheet or drag here</span>
+      </label>
+      <button type="submit" class="btn btn-primary">Preview upload</button>
+    </form>
+    <div id="previewWrap" class="hidden preview-block">
+      <div class="preview-meta">
+        <span id="previewStats"></span>
+        <button type="button" id="btnSaveValid" class="btn btn-primary">Save valid rows</button>
+        <button type="button" id="btnSaveAll" class="btn btn-ghost">Save all rows</button>
+      </div>
+      <div class="table-scroll mini">
+        <table id="previewTable">
+          <thead>
+            <tr><th>Sheet ID</th><th>Name</th><th>Email</th><th>Issues</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="emailModal" class="modal">
+    <form method="dialog" id="emailModalForm">
+      <h3>Confirm registration</h3>
+      <p class="hint">Email 1 of 3 — confirmation text only (pass & certificate are separate).</p>
+      <div id="emailPreviewBody" class="email-preview"></div>
+      <div class="modal-actions">
+        <button type="button" id="btnCancelConfirm" class="btn btn-ghost">Cancel</button>
+        <button type="submit" id="btnDoConfirm" class="btn btn-primary">Confirm & send</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="manageModal" class="modal">
+    <form method="dialog" id="manageForm">
+      <h3>Manage participant</h3>
+      <p id="manageWho" class="manage-who"></p>
+      <div class="manage-actions">
+        <button type="button" class="btn btn-primary btn-manage-confirm">Confirm</button>
+        <button type="button" class="btn btn-ghost btn-manage-pass">Send pass</button>
+        <button type="button" class="btn btn-ghost btn-manage-cert">Send certificate</button>
+      </div>
+      <div class="modal-actions">
+        <button type="button" id="btnCloseManage" class="btn btn-ghost">Close</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast hidden"></div>
+  <script src="/static/app.js"></script>
+</body>
+</html>

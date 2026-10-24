@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+openpyxl
+python-multipart
+google-genai
+python-dotenv
+pytest
+httpx
+qrcode[pil]
+reportlab

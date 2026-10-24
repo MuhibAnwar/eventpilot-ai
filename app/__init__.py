@@ -1,0 +1,1 @@
+"""EventPilot AI application package."""

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EventPilot — QR Check-in</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body class="checkin-body">
+  <div class="checkin-wrap">
+    <header class="checkin-header">
+      <a href="/" class="back-link">← Dashboard</a>
+      <h1>Live QR check-in</h1>
+      <p class="hint">Scan the QR on a participant's pass PDF. Tokens are verified server-side.</p>
+    </header>
+
+    <div class="checkin-grid">
+      <section class="panel">
+        <video id="video" playsinline muted class="checkin-video"></video>
+        <canvas id="canvas" class="hidden"></canvas>
+        <div class="toolbar">
+          <button type="button" class="btn btn-primary" id="btnStartCam">Start camera</button>
+          <button type="button" class="btn btn-ghost" id="btnStopCam">Stop</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <label class="hint" for="manualQr">Or paste QR JSON manually</label>
+        <textarea id="manualQr" rows="4" placeholder='{"type":"event_pass","participant_id":1,"token":"..."}'></textarea>
+        <button type="button" class="btn btn-primary" id="btnManualCheckIn">Check in</button>
+        <div id="result" class="checkin-result">Waiting for scan…</div>
+      </section>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <script src="/static/checkin.js"></script>
+</body>
+</html>
