@@ -1,35 +1,134 @@
+<div align="center">
+
 # EventPilot AI
 
-Event registration dashboard for **synthetic demo data only**. Built with Python, FastAPI, SQLite, and a plain HTML/JS frontend (no build step).
+**Your event registration control plane — Excel in, validated dashboard out, Gemma-routed insights, and three branded emails with QR check-in.**
 
-## Features
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Gemma 4](https://img.shields.io/badge/Gemma_4-26B-tool_router-4285F4?logo=google&logoColor=white)](https://ai.google.dev/gemma)
+[![MLH](https://img.shields.io/badge/Built_for-MLH_Hackathons-FF6B6B)](https://mlh.io/)
 
-- Upload `.xlsx` participant lists (`name`, `email`) with validation preview before save
-- Flag invalid or missing emails, missing names, and duplicate emails (highlighted in red with reasons)
-- Searchable dashboard with `pending` / `confirmed` status
-- Per-row **Confirm Registration** — sends confirmation email with **QR event pass PDF** attached
-- **Send pass** and **Send certificate** (PDF) for confirmed participants via SMTP
-- Idempotent confirm (double-click does not confirm or log twice)
-- **Action log** visible on the page
-- Natural-language queries routed by **Gemma 4** (`gemma-4-26b-a4b-it`) to a fixed allowlist of server tools
-- **Load sample data** (~11 synthetic rows) and downloadable sample spreadsheet
-- Optional HTTP Basic auth when `APP_PASSWORD` is set
+[Live repo](https://github.com/MuhibAnwar/eventpilot-ai) · [Product spec (PRD)](docs/PRD.md) · Check-in: `http://127.0.0.1:8000/check-in` when running locally
 
-## Setup (Windows)
+</div>
+
+---
+
+## Inspiration
+
+Hackathon weekends move fast: organizers get a messy `.xlsx`, invalid emails slip through, confirmations and passes go out in random order, and “just add ChatGPT” often means **API keys in the browser** or models that can do anything. We wanted one honest dashboard — import, fix, confirm, send — with **Gemma 4 as a safe tool router**, not an autonomous agent.
+
+EventPilot AI is built for **Major League Hacking–style events**: small team, real SMTP demos, judges who care about **audit logs, idempotency, and AI guardrails**.
+
+---
+
+## What it does
+
+| Area | What you get |
+|------|----------------|
+| **Import** | Upload `.xlsx` (`name`, `email`, optional sheet `id`) → validation preview → save |
+| **Dashboard** | KPIs, search/filter, pending vs confirmed, pass/cert/check-in columns |
+| **Email 1/3 — Confirm** | Human-approved modal → registration confirmed (HTML + plain, themed like the app) |
+| **Email 2/3 — Pass** | PDF event pass with **QR token** (confirmed only) |
+| **Email 3/3 — Certificate** | PDF certificate attachment (confirmed only) |
+| **Check-in** | `/check-in` — camera QR (jsQR) or manual JSON → server validates token |
+| **AI assistant** | Natural language → **Gemma 4** picks one allowlisted tool → Python runs the query |
+| **Judge kit** | Activity log stream, `/api/dashboard/judge-summary`, CSV export, bulk send passes |
+
+```mermaid
+flowchart LR
+  subgraph ingest [Ingest]
+    XLSX[Excel upload]
+    VAL[Validation preview]
+    DB[(SQLite)]
+    XLSX --> VAL --> DB
+  end
+  subgraph comms [Communications]
+    C[Confirm 1/3]
+    P[Pass PDF 2/3]
+    Cert[Certificate 3/3]
+    DB --> C --> P --> Cert
+  end
+  subgraph door [Door]
+    QR[QR on pass]
+    CI[Check-in API]
+    QR --> CI --> DB
+  end
+  subgraph ai [Gemma 4]
+    NL[User question]
+    R[JSON tool router]
+    T[Allowlisted tools]
+    NL --> R --> T --> DB
+  end
+```
+
+---
+
+## Gemma 4 integration (hackathon track)
+
+We use **`gemma-4-26b-a4b-it`** only in `app/agent.py` as a **structured tool router**:
+
+1. User asks in plain English on the dashboard (“how many duplicates?”).
+2. Gemma returns **JSON only**, e.g. `{"tool":"find_duplicates"}` (schema-enforced via `google-genai`).
+3. The server validates against a fixed allowlist — no arbitrary code, no direct DB writes from the model.
+4. Normal Python services answer with table-friendly results.
+
+**Allowlisted tools:** `show_all`, `invalid_emails`, `find_duplicates`, `count_participants`, `none`
+
+**Safety choices (for judges):**
+
+- **AI proposes, humans approve** — Gemma never sends email or confirms registration; organizers click Confirm in the UI.
+- **Secrets stay server-side** — `GEMINI_API_KEY` and SMTP credentials are loaded with `python-dotenv`; never sent to the browser.
+- **Fail closed on AI** — API errors return `{"error":"AI unavailable"}`; the rest of the app keeps working.
+- **Untrusted input** — spreadsheet cells and chat text are data; the UI escapes HTML when rendering.
+
+Thinking level is set to **MINIMAL** and temperature **0** for stable routing during live demos.
+
+---
+
+## Tech stack
+
+| Layer | Choice |
+|-------|--------|
+| API | **FastAPI** + **Uvicorn** |
+| Data | **SQLite** (participants, action logs, idempotency keys) |
+| Spreadsheets | **openpyxl** |
+| AI | **Google GenAI SDK** → Gemma 4 26B |
+| Email | **smtplib** + multipart HTML templates (`app/email_templates.py`) |
+| PDFs / QR | **ReportLab**, **qrcode** |
+| Frontend | Vanilla **HTML / CSS / JS** — no build step |
+| Tests | **pytest** + **httpx** (17 tests; Gemma mocked) |
+
+---
+
+## Quick start
+
+### Prerequisites
+
+- Python 3.11+
+- [Google AI Studio API key](https://aistudio.google.com/apikey) for Gemma routing
+- (Optional) Gmail or other SMTP for live email demos — [Gmail App Password](https://support.google.com/accounts/answer/185833) if using Google
+
+### Install & run
 
 ```powershell
-cd D:\mlh
+git clone https://github.com/MuhibAnwar/eventpilot-ai.git
+cd eventpilot-ai
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
 copy .env.example .env
 ```
 
-Edit `.env`:
+Edit `.env` — minimum for AI:
 
-- `GEMINI_API_KEY` — from [Google AI Studio](https://aistudio.google.com/apikey) (server-side only)
-- `APP_PASSWORD` — optional; if set, all routes require HTTP Basic auth (any username, this password)
-- **SMTP (optional)** — connect your mailbox to send real confirmation emails:
+```env
+GEMINI_API_KEY=your_key_here
+```
+
+Optional SMTP + event branding (used in PDFs and emails):
 
 ```env
 SMTP_HOST=smtp.gmail.com
@@ -38,76 +137,129 @@ SMTP_USER=you@gmail.com
 SMTP_PASSWORD=your-app-password
 SMTP_FROM=you@gmail.com
 SMTP_USE_TLS=true
+
+EVENT_NAME=MLH Hackathon 2026
+EVENT_DATE=2026-11-01
+EVENT_VENUE=Main Hall
 ```
 
-For Gmail, use an [App Password](https://support.google.com/accounts/answer/185833) (2FA required). The header shows **Email: connected** when SMTP is configured.
+Optional lockdown for public demos:
 
-Generate a synthetic workbook:
-
-```powershell
-python scripts\generate_sample_xlsx.py
+```env
+APP_PASSWORD=your-shared-password
 ```
 
-## Run
+Run:
 
 ```powershell
 uvicorn app.main:app --reload
 ```
 
-Open http://127.0.0.1:8000/
+Open **http://127.0.0.1:8000/** — check-in volunteers use **http://127.0.0.1:8000/check-in**.
 
-## Tests
+Sample workbook for judges: [`sample_participants.xlsx`](sample_participants.xlsx) (regenerate with `python scripts/generate_sample_xlsx.py`).
+
+### Tests
 
 ```powershell
 pytest
 ```
 
-Gemma API calls are mocked in tests; no live API key is required for CI/local pytest.
+No live Gemma calls in CI — routing is mocked in tests.
 
-## How Gemma is used
+---
 
-Gemma runs only in `app/agent.py` as a **tool router**. It must return JSON such as `{"tool":"invalid_emails"}`. The server:
+## 5-minute judge demo script
 
-1. Calls model `gemma-4-26b-a4b-it` via the `google-genai` SDK
-2. Extracts JSON safely (including fenced or noisy replies)
-3. Validates the tool name against: `show_all`, `invalid_emails`, `find_duplicates`, `count_participants`, `none`
-4. Executes normal Python code for that tool — no arbitrary code from the model
+1. **Import** — Upload `sample_participants.xlsx` → show red rows (bad email, duplicates) → save valid rows.
+2. **Dashboard** — Filter pending → pick one row → **Confirm** → show email preview → send (SMTP) or explain dry path if SMTP off.
+3. **Pass & cert** — **Send pass** → open PDF QR → **Send certificate** on another confirmed row.
+4. **Check-in** — Open `/check-in` → scan QR from pass PDF → show success + timestamp on dashboard.
+5. **Gemma** — Ask: *“Which emails are invalid?”* and *“How many participants?”* → show tool routing + results.
+6. **Audit** — Scroll activity log → hit judge summary (`GET /api/dashboard/judge-summary`) or export CSV from UI/API.
 
-If the API fails, the UI receives `{"error":"AI unavailable"}` without crashing the app.
+---
 
-## Passes & certificates
+## API overview
 
-1. **Confirm** — email **1/3**: registration confirmed (text only).
-2. **Send pass** — email **2/3**: `event-pass.pdf` with QR (confirmed only).
-3. **Send certificate** — email **3/3**: `certificate.pdf` (confirmed only).
+| Method | Path | Purpose |
+|--------|------|---------|
+| `POST` | `/api/upload/preview` | Validate Excel without saving |
+| `POST` | `/api/participants/save` | Persist preview rows |
+| `GET` | `/api/participants` | List + search/filter |
+| `POST` | `/api/participants/{id}/confirm` | Idempotent confirm + email 1/3 |
+| `POST` | `/api/participants/{id}/send-pass` | Email 2/3 + PDF |
+| `POST` | `/api/participants/{id}/send-certificate` | Email 3/3 + PDF |
+| `POST` | `/api/bulk/send-passes` | Batch passes for confirmed, unsent |
+| `POST` | `/api/check-in` | Validate QR payload, mark attendance |
+| `POST` | `/api/query` | Gemma tool router + execute tool |
+| `GET` | `/api/dashboard/stats` | KPI numbers |
+| `GET` | `/api/dashboard/judge-summary` | Narrative + metrics for pitches |
+| `GET` | `/api/participants/export.csv` | CSV download |
 
-Set event details in `.env`: `EVENT_NAME`, `EVENT_DATE`, `EVENT_VENUE`.
+Full requirements: [`docs/PRD.md`](docs/PRD.md).
 
-## Safety
+---
 
-- **AI proposes, humans approve** — Gemma only picks a predefined tool; it does not mutate data directly
-- **Human confirms before send** — preview in the modal; one real email per idempotent confirm when SMTP is configured
-- **Allowlist** — unknown tools become `none` with a friendly message
-- **Secrets** — `GEMINI_API_KEY` stays on the server (python-dotenv); never sent to the browser or logged
-- **Untrusted input** — spreadsheet cells and chat text are treated as data; HTML output is escaped in the UI
-- **Upload limits** — `.xlsx` only, max 2 MB
+## Challenges we hit
 
-## Limitations / Planned
+- **ReportLab + QR** — Drawing QR straight into PDF failed; we rasterize to PNG bytes first, then embed with `ImageReader`.
+- **Lazy GenAI client** — Import-time client init broke tests without a key; client is created on first route call.
+- **Idempotent confirms** — Double-clicks and retries must not duplicate emails or logs; dedicated idempotency tables per action.
+- **Three-email story** — Split confirm / pass / cert so judges see a clear pipeline instead of one bloated message.
 
-Not implemented yet:
+---
 
-- QR **check-in scanner** / attendance marking at the door
-- Google Sheets sync
+## Accomplishments
 
-## Deploy on DigitalOcean App Platform
+- End-to-end **registration → confirm → pass → certificate → check-in** in one repo, no frontend toolchain.
+- **Website-matched HTML emails** (dark sidebar palette, EP mark, Inter-style typography) plus plain-text fallbacks.
+- **Gemma 4 JSON router** with schema + allowlist — demo-friendly and easy to explain to non-ML judges.
+- **17 automated tests** covering validation, confirm idempotency, check-in, passes, and templates.
+
+---
+
+## What's next
+
+- Persistent hosting (managed DB instead of ephemeral SQLite on PaaS)
+- Google Sheets sync for live collaborator edits
+- Multi-event / multi-organizer tenancy
+- Scheduled certificate sends and reminder campaigns
+
+---
+
+## Project structure
+
+```
+app/
+  main.py           # FastAPI routes
+  agent.py          # Gemma 4 tool router
+  services.py       # Business logic + idempotency
+  email_templates.py
+  documents.py      # Pass + certificate PDFs
+  hackathon.py      # Judge summary + CSV
+static/             # Dashboard + check-in UI
+tests/              # pytest suite
+docs/PRD.md         # Full product requirements
+```
+
+---
+
+## Deploy notes (DigitalOcean App Platform)
 
 - **Run command:** `uvicorn app.main:app --host 0.0.0.0 --port 8080`
-- Set **encrypted environment variables:** `GEMINI_API_KEY`, and optionally `APP_PASSWORD`
-- SQLite lives on the container filesystem — data is **ephemeral** unless you attach persistent storage or switch to a managed database
+- Set encrypted env: `GEMINI_API_KEY`, SMTP vars, optional `APP_PASSWORD`
+- SQLite on the container disk is **ephemeral** unless you attach storage or migrate to Postgres
 
-## Documentation
+---
 
-Product notes can live under [`docs/`](docs/).
+## Team
+
+**Muhib Anwar** — [@MuhibAnwar](https://github.com/MuhibAnwar)
+
+Built for **MLH hackathon weekends** with **Gemma 4** as the intelligence layer behind a boring, reliable registration backend — the way production systems should use LLMs.
+
+---
 
 ## License
 
